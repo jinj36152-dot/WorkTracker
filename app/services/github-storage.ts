@@ -46,8 +46,13 @@ export class GitHubStorage {
 
       const data: GitHubFileResponse = await response.json();
       
-      // Base64 디코딩
-      const content = atob(data.content);
+      // Base64 디코딩 (UTF-8 지원)
+      const binaryString = atob(data.content.replace(/\n/g, ''));
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const content = new TextDecoder().decode(bytes);
       const records = JSON.parse(content);
       
       // 오래된 데이터 필터링 (당월 기준 전전달까지만 유지)
@@ -91,8 +96,11 @@ export class GitHubStorage {
         console.log('File does not exist, will create new file');
       }
 
-      // JSON을 Base64로 인코딩
-      const content = btoa(unescape(encodeURIComponent(JSON.stringify(records, null, 2))));
+      // JSON을 Base64로 인코딩 (UTF-8 지원)
+      const jsonString = JSON.stringify(records, null, 2);
+      const utf8Bytes = new TextEncoder().encode(jsonString);
+      const binaryString = Array.from(utf8Bytes, byte => String.fromCharCode(byte)).join('');
+      const content = btoa(binaryString);
 
       const body: any = {
         message: `Update work records - ${new Date().toISOString()}`,
